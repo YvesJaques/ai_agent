@@ -26,14 +26,23 @@ export const productTool: FunctionDeclarationsTool = {
     functionDeclarations: [
         {
             name: "getProductDetails",
-            description: "Gets the name, price and stock of a specific product from the inventory based on its ID.",
+            description: `
+                Retrieves detailed information for a specific product from the inventory database.
+                Use this function when the user asks about the price, name, or stock quantity of an item.
+                The function returns a JSON object with the following fields:
+                - id (string): The product's unique identifier.
+                - name (string): The product's name.
+                - price (number): The price of the product.
+                - stock (number): The quantity of units in stock.
+                If the product is not found, it returns an object with an 'error' field.
+            `,
             parameters: {
                 type: SchemaType.OBJECT,
                 properties: {
                     productId: {
                         type: SchemaType.STRING,
                         description: "The unique identifier of the product (e.g., 'prod-123').",
-                    },
+                    }
                 },
                 required: ["productId"],
             },

@@ -46,38 +46,39 @@ async function startChat(model: GenerativeModel) {
             break;
         }
 
+        let messageToSend: string | Part[] = userPrompt;
+        let keepTurning = true;
+
         try {
-            const result = await chat.sendMessage(userPrompt);
-            const response = result.response;
-            const calls: FunctionCall[] | undefined = response.functionCalls();
+            while (keepTurning) {
+                const result = await chat.sendMessage(messageToSend);
+                const response = result.response;
+                const calls: FunctionCall[] | undefined = response.functionCalls();
 
-            if (calls?.length) {
-                console.log("[Agente] Modelo solicitou o uso de uma ferramenta...");
-                const functionResponses: Part[] = [];
+                if (calls && calls.length > 0) {
+                    console.log("[Agente] Modelo solicitou o uso de uma ferramenta...");
 
-                for (const call of calls) {
-                    const functionToCall = availableTools[call.name];
-                    if (!functionToCall) {
-                        throw new Error(`Função desconhecida: ${call.name}`);
-                    }
+                    const functionResponses: Part[] = await Promise.all(
+                        calls.map(async (call) => {
+                            const functionToCall = availableTools[call.name];
+                            if (!functionToCall) {
+                                throw new Error(`Função desconhecida: ${call.name}`);
+                            }
+                            const functionResult = await functionToCall(call.args);
+                            return {
+                                functionResponse: {
+                                    name: call.name,
+                                    response: functionResult
+                                },
+                            };
+                        }));
 
-                    const functionResult = await functionToCall(call.args);
-
-                    functionResponses.push({
-                        functionResponse: {
-                            name: call.name,
-                            response: functionResult,
-                        },
-                    });
+                    messageToSend = functionResponses;
+                } else {
+                    console.log("Gemini:", response.text());
+                    keepTurning = false;
                 }
-
-                const finalResult = await chat.sendMessage(functionResponses);
-                console.log("Gemini:", finalResult.response.text());
-
-            } else {
-                console.log("Gemini:", response.text());
             }
-
         } catch (error) {
             console.error("\nAn error occurred:", error);
         }
