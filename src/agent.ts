@@ -2,7 +2,7 @@ import { GoogleGenerativeAI, ChatSession, GenerativeModel, Part, FunctionCall } 
 import * as dotenv from "dotenv";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { availableTools, productTool } from "./tools";
+import { allTools, availableTools } from "./tools";
 
 dotenv.config({ quiet: true });
 
@@ -18,7 +18,7 @@ function configureAgent(): GenerativeModel | null {
 
         return genAI.getGenerativeModel({
             model: "gemini-1.5-flash-latest",
-            tools: [productTool],
+            tools: allTools,
         });
 
     } catch (error) {
