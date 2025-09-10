@@ -1,5 +1,6 @@
 import { FunctionDeclarationsTool, SchemaType } from "@google/generative-ai";
 import { getMemoryCollection, queryMemory } from "./memory";
+import wiki from 'wikipedia';
 
 // 1. The actual TypeScript function you will execute
 const getProductDetails = (productId: string): { name: string, price: number, stock: number } | { error: string } => {
@@ -93,10 +94,55 @@ export const memorySearchTool: FunctionDeclarationsTool = {
     ],
 };
 
-export const allTools = [productTool, memorySearchTool];
+async function searchWikipedia(query: string): Promise<{ title: string, summary: string, url: string } | { error: string }> {
+    console.log(`[Tool] Searching Wikipedia for: "${query}"`);
+    try {
+        // Busca um resumo conciso do tópico
+        const summary = await wiki.summary(query);
+
+        return {
+            title: summary.title,
+            summary: summary.extract, // 'extract' contém o resumo
+            url: summary.content_urls.desktop.page, // URL para referência
+        };
+    } catch (error) {
+        console.error("[Tool Error] Wikipedia search failed:", error);
+        return { error: `Could not find a Wikipedia article for "${query}". Please try a different search term.` };
+    }
+}
+
+/**
+ * O schema que descreve a ferramenta da Wikipedia para o Gemini.
+ */
+export const wikipediaSearchTool: FunctionDeclarationsTool = {
+    functionDeclarations: [
+        {
+            name: "searchWikipedia",
+            description: `
+                Searches for a Wikipedia article to get general knowledge and definitions about a topic.
+                Use this tool to answer questions about public figures, historical events, scientific concepts, places, or companies.
+                It returns a concise summary of the topic.
+                Do not use it for internal project information or product inventory.
+            `,
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    query: {
+                        type: SchemaType.STRING,
+                        description: "The topic or search term to look up on Wikipedia (e.g., 'Quantum Computing', 'Albert Einstein').",
+                    },
+                },
+                required: ["query"],
+            },
+        },
+    ],
+};
+
+export const allTools = [productTool, memorySearchTool, wikipediaSearchTool];
 
 // 3. A map to easily find and execute the correct function
 export const availableTools: { [key: string]: Function } = {
     getProductDetails: (args: { productId: string }) => getProductDetails(args.productId),
     searchMemory: (args: { query: string }) => searchMemory(args.query),
+    searchWikipedia: (args: { query: string }) => searchWikipedia(args.query),
 };
